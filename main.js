@@ -37,9 +37,9 @@ const feelsLike = document.querySelector('p[data-textCondition="feelslike"]');
 const wind = document.querySelector('p[data-textCondition="wind_mph"]');
 const humidity = document.querySelector('p[data-textCondition="humidity"]');
 const uv = document.querySelector('p[data-textCondition="uv"]');
-const time = document.querySelector(".details__time");
-const imgByTime = document.querySelector(".details__img");
-const textByTime = document.querySelector(".details__text");
+// const hour = document.querySelector(".details__hour");
+// const imgByTime = document.querySelector(".details__img");
+// const textByTime = document.querySelector(".details__text");
 const tempRange = document.querySelector(".details__text-range");
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const currentLocation = `${latitude}, ${longitude}`;
           const dataAutocomplete = await fetchForecastWeather(currentLocation);
           updateWeatherInfo(dataAutocomplete);
+          updateWeatherInfoDetails(dataAutocomplete);
         },
         (error) => {
           console.error("Помилка отримання геолокації:", error);
@@ -71,6 +72,7 @@ btn.addEventListener("click", async () => {
   try {
     const dataForecast = await fetchForecastWeather(cityName);
     updateWeatherInfo(dataForecast);
+    updateWeatherInfoDetails(dataForecast);
   } catch (error) {
     console.error("Error fetching weather data:", error);
     // Handle error
@@ -87,7 +89,31 @@ function updateWeatherInfo(data) {
   humidity.textContent = `${data.current.humidity} %`;
   uv.textContent = `${data.current.uv}`;
   tempRange.textContent = `Max t : ${data.forecast.forecastday[0].day.maxtemp_c}   Min t : ${data.forecast.forecastday[0].day.mintemp_c}`;
-  time;
-  imgByTime;
-  textByTime;
+}
+
+function updateWeatherInfoDetails(data) {
+  const arrHours = data.forecast.forecastday[0].hour;
+  const detailsContainer = document.querySelector(".details");
+  const markup = `    
+    <div class="details__col">
+      <p class="details__hour"></p>
+      <img class="details__img" src="" alt="">
+      <p class="details__text"></p>
+    </div>
+  `;
+
+  detailsContainer.innerHTML = arrHours.map((hourData) => markup).join("");
+
+  const detailsCols = document.querySelectorAll(".details__col");
+
+  detailsCols.forEach((detailsCol, index) => {
+    const hourData = arrHours[index];
+    const hourElement = detailsCol.querySelector(".details__hour");
+    const imgElement = detailsCol.querySelector(".details__img");
+    const textElement = detailsCol.querySelector(".details__text");
+
+    hourElement.textContent = hourData.time;
+    imgElement.src = hourData.condition.icon;
+    textElement.textContent = hourData.condition.text;
+  });
 }
