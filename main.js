@@ -1,189 +1,93 @@
 "use strict";
-const input = document.querySelector(".display");
-const numbers = document.querySelectorAll(".number");
-const calculate = document.querySelector(".calculate");
-const addSignDisplay = document.querySelector(".addSignDisplay");
 
-let startValue = 0;
-let a = "";
-let b = "";
-let c = "";
-let d = "";
-let memory = "";
-let sign = "";
-let finish = false;
-input.value = startValue;
+import axios from "axios";
 
-function clearAll() {
-  a = "";
-  b = "";
-  d = "";
-  addSignDisplay.value = "";
-  sign = "";
-}
+const instance = axios.create({
+  baseURL: "http://api.weatherapi.com/v1",
+});
 
-const arrNumbers = [
-  "00",
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  ".",
-];
-const arrSign = ["/", "*", "+", "-", "√", "%"];
-const arrAddSign = ["MR", "M-", "M+", "→", "MC", "AC"];
+export const fetchForecastWeather = async (q = "", day = 1) => {
+  const { data } = await instance.get("/forecast.json", {
+    params: {
+      day: day,
+      q: q,
+      key: "7e3aa98d0d394983b9975256240705",
+    },
+  });
+  return data;
+};
+export const fetchAutocompleteWeather = async (q = "") => {
+  const { data } = await instance.get("/forecast.json", {
+    params: {
+      q: q,
+      key: "7e3aa98d0d394983b9975256240705",
+    },
+  });
+  return data;
+};
 
-calculate.addEventListener("click", onCalculateClick);
+const input = document.querySelector(".search__input");
+const btn = document.querySelector(".search__button");
+const temp = document.querySelector(".weather__temp");
+const city = document.querySelector(".weather__city");
+const imgMain = document.querySelector(".condition-img");
+const textCurrently = document.querySelector(".condition-text");
+const date = document.querySelector(".condition-date");
+const feelsLike = document.querySelector('p[data-textCondition="feelslike"]');
+const wind = document.querySelector('p[data-textCondition="wind_mph"]');
+const humidity = document.querySelector('p[data-textCondition="humidity"]');
+const uv = document.querySelector('p[data-textCondition="uv"]');
+const time = document.querySelector(".details__time");
+const imgByTime = document.querySelector(".details__img");
+const textByTime = document.querySelector(".details__text");
+const tempRange = document.querySelector(".details__text-range");
 
-function onCalculateClick(e) {
-  let result;
-  if (e.target.nodeName !== "BUTTON") return;
-  const key = e.target.textContent;
+document.addEventListener("DOMContentLoaded", () => {
+  const userResponse = confirm("Дозволити доступ до місцезнаходження?");
 
-  if (key === "%") {
-    const percent = (a * b) / 100;
-    console.log("a: ", a);
-    input.value = percent;
-    b = percent;
-    console.log("b: ", b);
-
-    return;
-  }
-  if (key === "√") {
-    const sqrt = Math.sqrt(a);
-    input.value = sqrt;
-    a = sqrt;
-    return;
-  }
-
-  if (arrNumbers.includes(key)) {
-    if (b === "" && sign === "") {
-      if (key === "." && a === "") {
-        a = "0" + key;
-      } else if (key === "00" && a === "") {
-        a = "0";
-      } else if (key === "." && a.toString().includes(key)) {
-        return;
-      } else {
-        a += key;
-      }
-      input.value = a;
-    } else if (a !== "") {
-      if (key === "." && b === "") {
-        b = "0" + key;
-      } else if (key === "00" && b === "") {
-        b = "0";
-      } else if (key === "." && b.toString().includes(key)) {
-        return;
-      } else {
-        b += key;
-      }
-      input.value = b;
-    } else if (a !== "" && b !== "" && finish) {
-      a = c;
-      b = key;
-      finish = false;
-      input.value = b;
-    }
-    // else {
-    //   b += key;
-    //   input.value = b;
-    // }
-  }
-
-  if (arrSign.includes(key)) {
-    sign = key;
-    input.value = sign;
-    return;
-  }
-
-  if (key === "=" && sign === "") {
-    return (input.value = a);
-  }
-
-  if (key === "=") {
-    d = Math.max(a.length, b.length);
-    switch (sign) {
-      case "/":
-        if (b === "0" || b === "00") {
-          addSignDisplay.value = "Err";
-          input.value = "0";
-          c = "";
-          return;
+  if (userResponse) {
+    try {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const currentLocation = `${latitude}, ${longitude}`;
+          const dataAutocomplete = await fetchForecastWeather(currentLocation);
+          updateWeatherInfo(dataAutocomplete);
+        },
+        (error) => {
+          console.error("Помилка отримання геолокації:", error);
         }
-        c = a / b;
-        break;
-      case "*":
-        c = a * b;
-        break;
-      case "-":
-        c = a - b;
+      );
+    } catch (error) {
+      console.error("Помилка при спробі отримати геолокацію:", error);
+    }
+  } else {
+    console.log("Користувач відхилив запит на доступ до місцезнаходження.");
+  }
+});
+btn.addEventListener("click", async () => {
+  const cityName = input.value;
 
-        break;
-      case "+":
-        c = +a + +b;
-        break;
-    }
-    while (c.length > 1 && с[с.length - 1] === "0" && с[с.length - 2] !== ".") {
-      с = parseFloat(c).toFixed(d).pop();
-      return c;
-    }
-    a = c;
-    b = "";
-    finish = true;
-    input.value = c;
+  try {
+    const dataForecast = await fetchForecastWeather(cityName);
+    updateWeatherInfo(dataForecast);
+  } catch (error) {
+    console.error("Error fetching weather data:", error);
+    // Handle error
   }
-  if (arrAddSign.includes(key)) {
-    switch (key) {
-      case "MR":
-        if (memory !== "") {
-          input.value = memory;
-          a = memory;
-          b = "";
-        } else {
-          input.value = 0;
-        }
-        addSignDisplay.value = key;
-        break;
-      case "M-":
-        if (memory !== "") {
-          memory -= a;
-        } else {
-          memory = 0 - a;
-        }
-        clearAll();
-        addSignDisplay.value = key;
-        break;
-      case "M+":
-        if (memory !== "") {
-          memory += a;
-        } else {
-          memory = a;
-        }
-        clearAll();
-        addSignDisplay.value = key;
-        break;
-      case "→":
-        input.value = input.value.slice(0, -1);
-        if (input.value.length <= 0) input.value = 0;
-        break;
-      case "MC":
-        memory = "";
-        addSignDisplay.value = "";
-        break;
-      case "AC":
-        finish = false;
-        input.value = startValue;
-        c = "";
-        clearAll();
-        memory = "";
-        break;
-    }
-  }
+});
+
+function updateWeatherInfo(data) {
+  city.textContent = `${data.location.name}, ${data.location.country}`;
+  imgMain.src = `${data.current.condition.icon}`;
+  textCurrently.textContent = data.current.condition.text;
+  date.textContent = data.location.localtime;
+  feelsLike.textContent = `${data.current.feelslike_c}∘`;
+  wind.textContent = `${data.current.wind_dir} ${data.current.wind_kph}kph`;
+  humidity.textContent = `${data.current.humidity} %`;
+  uv.textContent = `${data.current.uv}`;
+  tempRange.textContent = `Max t : ${data.forecast.forecastday[0].day.maxtemp_c}   Min t : ${data.forecast.forecastday[0].day.mintemp_c}`;
+  time;
+  imgByTime;
+  textByTime;
 }
