@@ -5,26 +5,31 @@ import axios from "axios";
 const instance = axios.create({
   baseURL: "http://api.weatherapi.com/v1",
 });
+const langCode = navigator.language.split("-")[0];
+console.log("langCode: ", langCode);
+export const fetchForecastWeather = async (q = "", days = 2) => {
+  const { data } = await instance.get("/forecast.json", {
+    params: {
+      lang: langCode,
+      days: days,
+      q: q,
+      key: "7e3aa98d0d394983b9975256240705",
+    },
+  });
+  return data;
+};
 
-export const fetchForecastWeather = async (q = "", day = 1) => {
-  const { data } = await instance.get("/forecast.json", {
-    params: {
-      day: day,
-      q: q,
-      key: "7e3aa98d0d394983b9975256240705",
-    },
-  });
-  return data;
-};
-export const fetchAutocompleteWeather = async (q = "") => {
-  const { data } = await instance.get("/forecast.json", {
-    params: {
-      q: q,
-      key: "7e3aa98d0d394983b9975256240705",
-    },
-  });
-  return data;
-};
+// export const fetchAutocompleteWeather = async (q = "", days = 2) => {
+//   const { data } = await instance.get("/forecast.json", {
+//     params: {
+//       lang: langCode,
+//       days: days,
+//       q: q,
+//       key: "7e3aa98d0d394983b9975256240705",
+//     },
+//   });
+//   return data;
+// };
 
 const input = document.querySelector(".search__input");
 const btn = document.querySelector(".search__button");
@@ -82,6 +87,7 @@ btn.addEventListener("click", async () => {
 function updateWeatherInfo(data) {
   city.textContent = `${data.location.name}, ${data.location.country}`;
   imgMain.src = `${data.current.condition.icon}`;
+  temp.textContent = `${data.current.temp_c}∘C`;
   textCurrently.textContent = data.current.condition.text;
   date.textContent = data.location.localtime;
   feelsLike.textContent = `${data.current.feelslike_c}∘`;
@@ -92,28 +98,46 @@ function updateWeatherInfo(data) {
 }
 
 function updateWeatherInfoDetails(data) {
-  const arrHours = data.forecast.forecastday[0].hour;
+  const arrHours = [
+    ...data.forecast.forecastday[0].hour,
+    ...data.forecast.forecastday[1].hour,
+  ];
+  console.log("arrHours: ", arrHours);
   const detailsContainer = document.querySelector(".details");
   const markup = `    
-    <div class="details__col">
+   
       <p class="details__hour"></p>
       <img class="details__img" src="" alt="">
       <p class="details__text"></p>
-    </div>
+  
   `;
 
-  detailsContainer.innerHTML = arrHours.map((hourData) => markup).join("");
+  detailsContainer.innerHTML = ""; // Очищаємо контейнер перед заповненням
 
-  const detailsCols = document.querySelectorAll(".details__col");
+  let detailsCols = [];
 
-  detailsCols.forEach((detailsCol, index) => {
-    const hourData = arrHours[index];
-    const hourElement = detailsCol.querySelector(".details__hour");
-    const imgElement = detailsCol.querySelector(".details__img");
-    const textElement = detailsCol.querySelector(".details__text");
+  arrHours.forEach((hourData) => {
+    if (hourData.time > date.textContent) {
+      // Перевірка умови
+      const detailsCol = document.createElement("div");
+      detailsCol.classList.add("details__col");
+      detailsCol.innerHTML = markup;
 
-    hourElement.textContent = hourData.time;
-    imgElement.src = hourData.condition.icon;
-    textElement.textContent = hourData.condition.text;
+      const hourElement = detailsCol.querySelector(".details__hour");
+      const imgElement = detailsCol.querySelector(".details__img");
+      const textElement = detailsCol.querySelector(".details__text");
+
+      hourElement.textContent = hourData.time;
+      imgElement.src = hourData.condition.icon;
+      textElement.textContent = `☔ ${hourData.chance_of_rain}%`;
+
+      detailsCols.push(detailsCol);
+    }
+  });
+
+  detailsCols = detailsCols.slice(0, 7);
+
+  detailsCols.forEach((detailsCol) => {
+    detailsContainer.appendChild(detailsCol);
   });
 }
